@@ -2,9 +2,11 @@
 # Deployment platforms (Streamlit Community Cloud / Render / Railway) install
 # from this file. The heavier Snakemake preprocessing stack lives in
 # requirements-pipeline.txt; optional ML extras are in pyproject.toml.
-numpy>=1.23,<2
+# numpy is left unpinned (>=1.26) so wheels are available on every modern Python
+# (3.10-3.13); the code is numpy 2.x compatible.
+numpy>=1.26
 pandas>=2.0
-scikit-learn>=1.3
+scikit-learn>=1.5,<1.11
 xgboost>=2.0
 joblib>=1.3
 pyyaml>=6.0
