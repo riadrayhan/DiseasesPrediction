@@ -38,7 +38,7 @@ from .models.survival import PrognosticModel
 from .models.interpretable import InterpretableRuleClassifier, MMETHANEAdapter
 from .models.deepsurv import DeepSurvModel
 from .bundle import TrainedBundle
-from . import data, uncertainty, interpret, validation, report, integration, pdf, ingest
+from . import data, uncertainty, interpret, validation, report, integration, pdf, ingest, classify
 
 __version__ = "0.1.0"
 
@@ -61,4 +61,5 @@ __all__ = [
     "integration",
     "pdf",
     "ingest",
+    "classify",
 ]

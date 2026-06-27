@@ -336,6 +336,71 @@ def _cmd_ingest(args: argparse.Namespace) -> int:
 
 
 # ---------------------------------------------------------------------------
+# classify (raw reads -> built-in reference -> profile -> disease prediction)
+# ---------------------------------------------------------------------------
+def _cmd_classify(args: argparse.Namespace) -> int:
+    from . import classify
+
+    classifier, bundle = classify.build_demo_classifier_and_model()
+
+    if args.demo:
+        if args.demo not in classify.DISEASE_DESIGN:
+            raise SystemExit(
+                f"--demo must be one of {list(classify.DISEASE_DESIGN)}"
+            )
+        design = classify.DISEASE_DESIGN[args.demo]
+        abundances = {sp: 1.0 for sp in classifier.species}
+        for sp in design.get("up", []):
+            abundances[sp] = 8.0
+        for sp in design.get("down", []):
+            abundances[sp] = 0.2
+        records = classify.simulate_reads(
+            classifier.reference, abundances, n_reads=args.n_reads, seed=args.seed
+        )
+        if args.out:
+            Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+            with open(args.out, "w") as fh:
+                for header, seq in records:
+                    fh.write(f">{header}\n{seq}\n")
+            print(f"[classify] wrote {len(records)} demo reads -> {args.out}",
+                  file=sys.stderr)
+        sample = args.demo
+    elif args.input:
+        text = ingest.decode_bytes(Path(args.input).read_bytes())
+        kind = ingest.detect_kind(args.input, text[:256])
+        records = (ingest.parse_fastq(text) if kind == ingest.KIND_FASTQ
+                   else ingest.parse_fasta(text))
+        sample = Path(args.input).stem
+    else:
+        raise SystemExit("Provide --input <file> or --demo <condition>.")
+
+    profile, stats = classifier.classify_profile(records, sample)
+    print(f"=== Read classification ({sample}) ===")
+    print(f"  reads={stats['n_reads']}  classified={stats['n_classified']} "
+          f"({stats['pct_classified']}%)  species={stats['n_species_detected']}")
+    if profile.empty:
+        print("No reads matched the built-in demo reference panel.")
+        return 1
+    print("\n  Top microbes:")
+    print(profile.iloc[0].sort_values(ascending=False).head(10).round(4).to_string())
+
+    X = data.align_features(profile, bundle.feature_names)
+    proba = bundle.classifier.predict_proba(X)[0]
+    classes = [str(c) for c in bundle.classifier.classes_]
+    pred = classes[int(np.argmax(proba))]
+    print("\n=== Disease prediction ===")
+    print(f"  Predicted: {pred}  ({max(proba):.0%} confidence)")
+    for c, p in sorted(zip(classes, proba), key=lambda kv: -kv[1]):
+        print(f"    {c:20s} {p:.3f}")
+
+    if args.output:
+        Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+        profile.to_csv(args.output)
+        print(f"[classify] wrote species profile -> {args.output}", file=sys.stderr)
+    return 0
+
+
+# ---------------------------------------------------------------------------
 # parser
 # ---------------------------------------------------------------------------
 def build_parser() -> argparse.ArgumentParser:
@@ -409,6 +474,22 @@ def build_parser() -> argparse.ArgumentParser:
     p_ingest.add_argument("--sample", default=None,
                           help="Override the sample name (default: input filename stem).")
     p_ingest.set_defaults(func=_cmd_ingest)
+
+    # classify
+    p_classify = sub.add_parser(
+        "classify",
+        help="Classify raw reads with the built-in reference and predict disease.")
+    p_classify.add_argument("--input", default=None,
+                            help="Input .fna/.fastq of raw reads to classify.")
+    p_classify.add_argument("--demo", default=None,
+                            help="Generate + classify a demo sample: healthy | colorectal_cancer | ibd")
+    p_classify.add_argument("--out", default=None,
+                            help="With --demo, write the generated raw reads to this .fna.")
+    p_classify.add_argument("--output", default=None,
+                            help="Write the derived species-profile matrix to this CSV.")
+    p_classify.add_argument("--n-reads", type=int, default=600)
+    p_classify.add_argument("--seed", type=int, default=1)
+    p_classify.set_defaults(func=_cmd_classify)
 
     return parser
 
