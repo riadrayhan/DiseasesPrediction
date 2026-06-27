@@ -1,0 +1,20 @@
+# Keep deployment images small and builds fast.
+.venv/
+venv/
+env/
+results/
+logs/
+.snakemake/
+.git/
+.github/
+__pycache__/
+**/__pycache__/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+tests/
+test_data/
+*.joblib
+*.pkl
+*.tmp
+.tmp_*

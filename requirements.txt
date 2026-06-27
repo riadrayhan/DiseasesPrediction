@@ -1,0 +1,17 @@
+# Runtime dependencies for the microbiome-predict web app + library.
+# Deployment platforms (Streamlit Community Cloud / Render / Railway) install
+# from this file. The heavier Snakemake preprocessing stack lives in
+# requirements-pipeline.txt; optional ML extras are in pyproject.toml.
+numpy>=1.23,<2
+pandas>=2.0
+scikit-learn>=1.3
+xgboost>=2.0
+joblib>=1.3
+pyyaml>=6.0
+streamlit>=1.49
+xhtml2pdf>=0.2.16
+
+# Optional features (not required for the web app to run; enable as needed):
+#   lifelines>=0.27   # Model 4 prognostic survival
+#   shap>=0.44        # richer local explanations
+#   torch>=2.0        # DeepSurv neural survival

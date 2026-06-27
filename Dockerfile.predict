@@ -1,0 +1,37 @@
+# ==============================================================================
+# Microbiome Prediction Layer — Container (downstream ML models)
+# ==============================================================================
+# This packages the `microbiome_predict` Python package (Models 1-4 + reporting),
+# separate from the preprocessing container (see Dockerfile). It does NOT need
+# Kraken2/Bowtie2 etc. — it consumes the abundance matrix they produce.
+#
+# Build:  docker build -f Dockerfile.predict -t microbiome-predict .
+# Train:  docker run -v ${PWD}:/work microbiome-predict train \
+#             --matrix /work/results/matrix/species_abundance_matrix.csv \
+#             --metadata /work/labels.tsv --label-col disease \
+#             --healthy-label healthy --out /work/model.joblib
+# Predict:docker run -v ${PWD}:/work microbiome-predict predict \
+#             --model /work/model.joblib \
+#             --matrix /work/results/matrix/species_abundance_matrix.csv \
+#             --report /work/report.html --pdf
+# ==============================================================================
+FROM python:3.11-slim
+
+LABEL maintainer="Riad Rayhan"
+LABEL description="Microbiome disease-prediction ML layer: ensemble + wellness index + survival + reporting"
+
+WORKDIR /app
+
+# System libs occasionally needed by scientific wheels / PDF rendering fonts.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY pyproject.toml README.md ./
+COPY src/ ./src/
+
+# Install the package with the survival, interpret and pdf extras.
+RUN pip install --no-cache-dir ".[survival,interpret,pdf]"
+
+ENTRYPOINT ["microbiome-predict"]
+CMD ["--help"]

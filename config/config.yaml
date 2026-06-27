@@ -1,0 +1,85 @@
+# ==============================================================================
+# Microbiome Preprocessing Pipeline — Configuration
+# ==============================================================================
+# Edit the paths below to match your environment. All paths can be absolute
+# or relative to the directory you run `snakemake` from.
+
+# ------------------------------------------------------------------------------
+# Sample sheet
+# ------------------------------------------------------------------------------
+# A TSV with columns: sample, fq1, fq2
+# fq2 may be left empty for single-end data.
+samples_tsv: "config/samples.tsv"
+
+# ------------------------------------------------------------------------------
+# General
+# ------------------------------------------------------------------------------
+output_dir: "results"
+threads: 8          # default threads per rule; overridden per-rule below if set
+log_dir: "logs"
+
+# Input sequence format: "fastq" (default; enables quality QC + trimming) or
+# "fasta" for raw .fna reads. FASTA carries no per-base quality scores, so
+# quality-based trimming is not meaningful for it; use the MetaPhlAn profiler
+# (below) for end-to-end FASTA classification (it accepts --input_type fasta).
+input_format: "fastq"
+
+# ------------------------------------------------------------------------------
+# Step 1 — Quality control (FastQC / MultiQC)
+# ------------------------------------------------------------------------------
+qc:
+  enabled: true
+
+# ------------------------------------------------------------------------------
+# Step 2 — Trimming / adapter removal (cutadapt)
+# ------------------------------------------------------------------------------
+trimming:
+  enabled: true
+  tool: "cutadapt"          # cutadapt | trimmomatic
+  min_length: 50             # discard reads shorter than this after trimming
+  quality_cutoff: 20         # Phred quality threshold for 3' trimming
+  adapter_r1: "AGATCGGAAGAGC"   # Illumina TruSeq adapter (override as needed)
+  adapter_r2: "AGATCGGAAGAGC"
+  threads: 4
+
+# ------------------------------------------------------------------------------
+# Step 3 — Host (human) read removal (Bowtie2)
+# ------------------------------------------------------------------------------
+host_removal:
+  enabled: true
+  # Path to a pre-built Bowtie2 index prefix for the host genome
+  # (e.g. GRCh38). Build once with: bowtie2-build host_genome.fna host_index
+  bowtie2_index: "resources/host_genome/host_index"
+  threads: 8
+
+# ------------------------------------------------------------------------------
+# Step 4 — Taxonomic profiling (Kraken2 + Bracken)
+# ------------------------------------------------------------------------------
+taxonomic_profiling:
+  enabled: true
+  profiler: "kraken2"                          # kraken2 | metaphlan
+  kraken2_db: "resources/kraken2_db"          # path to a built Kraken2 database
+  confidence: 0.1                              # Kraken2 confidence threshold
+  bracken_read_length: 150                     # must match a *.kmer_distrib file shipped with the DB
+  bracken_threshold: 10                        # min reads to keep a taxon
+  bracken_level: "S"                           # S = species
+  threads: 8
+  # MetaPhlAn settings (used when profiler: metaphlan)
+  metaphlan_db: "resources/metaphlan_db"       # path to a downloaded MetaPhlAn bowtie2 DB
+  metaphlan_index: "mpa_vJan21_CHOCOPhlAnSGB_202103"  # DB index name
+
+# ------------------------------------------------------------------------------
+# Step 5 — Functional profiling (HUMAnN3) — optional, heavy (large DBs, slow)
+# ------------------------------------------------------------------------------
+functional_profiling:
+  enabled: false
+  nucleotide_db: "resources/humann3_dbs/chocophlan"
+  protein_db: "resources/humann3_dbs/uniref"
+  threads: 8
+
+# ------------------------------------------------------------------------------
+# Step 6 — Output matrix construction
+# ------------------------------------------------------------------------------
+matrix:
+  abundance_metric: "fraction_total_reads"   # fraction_total_reads | new_est_reads
+  min_prevalence: 0.0   # drop taxa present in fewer than this fraction of samples (0 = keep all)

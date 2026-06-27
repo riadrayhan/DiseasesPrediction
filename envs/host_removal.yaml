@@ -1,0 +1,7 @@
+name: host_removal
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - bowtie2=2.5.3
+  - samtools=1.19

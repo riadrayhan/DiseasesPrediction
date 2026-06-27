@@ -1,0 +1,13 @@
+# Streamlit configuration for the microbiome-predict web app.
+# Run from the project root so this file is picked up automatically.
+
+[server]
+# Effectively-unlimited upload size for large FASTA/FASTQ metagenomes (value in MB).
+# 50000 MB = ~50 GB per file. Raise further if you routinely handle bigger files.
+maxUploadSize = 50000
+# Websocket message size must also be raised or large uploads are rejected mid-transfer.
+maxMessageSize = 50000
+headless = true
+
+[browser]
+gatherUsageStats = false

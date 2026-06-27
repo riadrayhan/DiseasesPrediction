@@ -1,0 +1,8 @@
+name: taxonomy
+channels:
+  - bioconda
+  - conda-forge
+dependencies:
+  - kraken2=2.1.3
+  - bracken=2.9
+  - metaphlan=4.1.0

@@ -1,0 +1,6 @@
+# Snakemake preprocessing pipeline (spec Section 2) Python dependencies.
+# The bioinformatics tools themselves (FastQC, MultiQC, cutadapt, Bowtie2,
+# Kraken2/Bracken, MetaPhlAn, HUMAnN3) are installed via the conda environments
+# in envs/, not pip. Install with:  pip install -r requirements-pipeline.txt
+pandas>=2.0
+snakemake>=8.0
